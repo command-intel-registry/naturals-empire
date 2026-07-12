@@ -494,53 +494,121 @@
       status.textContent = 'Could not load that dataset: ' + e.message;
     }
   }
-
-  async function confirmREImport(){
+async function confirmREImport(){
     if(!pendingREImport || !currentUserId) return;
     const signalLabel = document.getElementById('reSignalLabel').value.trim() || 'unspecified';
     const status = document.getElementById('reSearchStatus');
-    let imported = 0, buyers = 0;
+    let imported = 0, buyers = 0, skippedSold = 0, needsManualLookup = 0;
 
     for(const raw of pendingREImport.rows){
       const cols = Object.keys(raw);
       const lower = {}; cols.forEach(c=>lower[c.toLowerCase()]=c);
       const findCol = (aliases) => { for(const a of aliases) if(lower[a]) return lower[a]; return null; };
 
-      const ownerCol = findCol(["owner_name","ownername","owner","taxpayer_name","name"]);
-      const addrCol = findCol(["property_address","situs_address","site_address","address","location_address"]);
-      const cityCol = findCol(["city","situs_city"]);
-      const stateCol = findCol(["state","situs_state"]);
-      const taxCol = findCol(["tax_owed","taxdue","amount_due","delinquent_amount","total_due"]);
-      const yrsCol = findCol(["years_delinquent","yrs_delinquent","delinquent_years"]);
+      const soldCol = findCol([
+        "sold_at_sale","sale_status","disposition","status_sold","was_sold",
+        "status","sold","sale_disposition","auction_status","bid_status",
+        "certificate_status","outcome","result"
+      ]);
+      const buyerCol = findCol([
+        "buyer_name","purchaser_name","buyer","purchaser","winning_bidder",
+        "certificate_holder","buyer_info","awarded_to"
+      ]);
+      const explicitSold = soldCol && ['true','yes','sold','y'].includes(String(raw[soldCol]).toLowerCase());
+      const statusSaysSold = soldCol && /sold|redeemed|paid|closed|awarded|purchased/i.test(String(raw[soldCol]));
+      const buyerFilled = buyerCol && raw[buyerCol] && String(raw[buyerCol]).trim().length > 0;
+      if(explicitSold || statusSaysSold || buyerFilled){
+        skippedSold++;
+        continue;
+      }
 
-      const ownerName = ownerCol ? raw[ownerCol] : null;
+      const ownerCol = findCol([
+        "owner_name","ownername","owner","taxpayer_name","name",
+        "mail_address_name","owner_address_name","property_owner","current_owner",
+        "record_owner","grantee","titleholder","owner1","owner_1"
+      ]);
+      const addrCol = findCol([
+        "property_address","situs_address","site_address","address",
+        "location_address","prop_address_full","full_address","street_address",
+        "physical_address","parcel_address","property_location","location","addr"
+      ]);
+      const cityCol = findCol([
+        "city","situs_city","prop_address_city_name","property_city",
+        "mailing_city","municipality","town"
+      ]);
+      const stateCol = findCol([
+        "state","situs_state","prop_address_state","property_state",
+        "mailing_state","st"
+      ]);
+      const zipCol = findCol([
+        "zip","zipcode","zip_code","postal_code","prop_address_zipcode_1"
+      ]);
+      const taxCol = findCol([
+        "tax_owed","taxdue","amount_due","delinquent_amount","total_due",
+        "tax_amount_offered","total_tax_and_penalty_amount_offered","taxes_due",
+        "total_amount_due","balance_due","outstanding_balance","amount_owed",
+        "delinquent_tax_amount","tax_balance"
+      ]);
+      const yrsCol = findCol([
+        "years_delinquent","yrs_delinquent","delinquent_years","years_owed",
+        "num_years_delinquent","delinquency_years"
+      ]);
+      const yearCol = findCol([
+        "year","tax_year","sale_year","tax_sale_year","delinquent_year"
+      ]);
+      const pinCol = findCol([
+        "pin","parcel_number","apn","parcel_id","parcelid","parcel",
+        "pin10","tax_id","tax_parcel_number","assessor_parcel_number",
+        "property_id","account_number","folio","folio_number","map_parcel"
+      ]);
+      const valueCol = findCol([
+        "assessed_value","appraised_value","market_value","property_value","total_value"
+      ]);
+
+      let ownerName = ownerCol ? raw[ownerCol] : null;
       let address = addrCol ? raw[addrCol] : null;
       let pinLookupCity = null, pinLookupState = null;
-      if(!address && lower['pin']){
+      let manualLookupNote = "";
+
+      if(!address && pinCol){
         try {
           const resp = await fetch('https://ebvrqkomufysyufveqjf.supabase.co/functions/v1/lookup-parcel-address', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pin: raw[lower['pin']] })
+            body: JSON.stringify({ pin: raw[pinCol] })
           });
           const data = await resp.json();
           if(data.found && data.address){
             address = data.address;
             pinLookupCity = data.city;
             pinLookupState = data.state;
-          } else { continue; }
-        } catch(e){ continue; }
+            if(!ownerName && data.name) ownerName = data.name;
+          }
+        } catch(e){ /* fall through to manual-lookup case below */ }
+      }
+
+      if(!address && pinCol){
+        address = `Parcel #${raw[pinCol]} - address unknown`;
+        manualLookupNote = " | ADDRESS NOT FOUND - look up parcel " + raw[pinCol] + " manually on the county site";
+        needsManualLookup++;
       }
       if(!address) continue;
 
       const taxOwed = taxCol ? parseFloat(String(raw[taxCol]).replace(/[$,]/g,'')) : null;
       const yrsDelinquent = yrsCol ? parseFloat(raw[yrsCol]) : null;
+      const assessedValue = valueCol ? parseFloat(String(raw[valueCol]).replace(/[$,]/g,'')) : null;
+      const zip = zipCol ? raw[zipCol] : null;
+      const taxYear = yearCol ? raw[yearCol] : null;
       const llc = isLLC(ownerName);
       if(llc) buyers++;
 
       let notes = `Source: ${pendingREImport.name}`;
       if(taxOwed) notes += ` | Tax owed: $${taxOwed}`;
       if(yrsDelinquent) notes += ` | Years delinquent: ${yrsDelinquent}`;
+      if(taxYear) notes += ` | Tax year: ${taxYear}`;
+      if(assessedValue) notes += ` | Assessed value: $${assessedValue}`;
+      if(zip) notes += ` | Zip: ${zip}`;
+      notes += manualLookupNote;
 
       const motivationScore = yrsDelinquent ? Math.min(100, Math.round(yrsDelinquent * 20)) : 40;
 
@@ -560,13 +628,12 @@
       imported++;
     }
 
-    status.textContent = `Imported ${imported} leads (${buyers} flagged as LLC buyers).`;
+    status.textContent = `Imported ${imported} leads (${buyers} LLC buyers, ${skippedSold} skipped as sold, ${needsManualLookup} need manual address lookup).`;
     pendingREImport = null;
     document.getElementById('reResults').innerHTML = '';
     loadRealEstateLeads();
     loadCounts();
   }
-
   async function loadRealEstateLeads(){
     if(!currentUserId) return;
     const { data } = await sb.from('leads').select('*').eq('lead_type','real_estate').eq('created_by', currentUserId).order('motivation_score', { ascending: false }).limit(50);
