@@ -29,7 +29,6 @@
     position:relative;
     min-height:100vh;
   }
-  /* subtle film grain for tactile, non-flat feel */
   body::before{
     content:"";
     position:fixed; inset:0; z-index:9999; pointer-events:none;
@@ -51,14 +50,10 @@
   }
   .accent-glow{ text-shadow:0 0 22px rgba(212,168,83,0.4); }
   ::selection{ background:rgba(212,168,83,0.3); }
-
-  /* custom scrollbar */
   ::-webkit-scrollbar{ width:8px; height:8px; }
   ::-webkit-scrollbar-track{ background:transparent; }
   ::-webkit-scrollbar-thumb{ background:rgba(212,168,83,0.25); border-radius:99px; }
   ::-webkit-scrollbar-thumb:hover{ background:rgba(212,168,83,0.45); }
-
-  /* nav */
   .nav-item{ position:relative; transition:color .2s ease; }
   .nav-item .nav-icon{ opacity:.6; transition:opacity .2s ease; }
   .nav-item.active{ color:var(--gold); }
@@ -73,8 +68,6 @@
     z-index:-1;
   }
   .nav-item.active .nav-pill{ opacity:1; transform:scaleY(1); }
-
-  /* gold shimmer buttons */
   .btn-gold{
     position:relative; overflow:hidden;
     background:linear-gradient(135deg, var(--gold), #C99A45);
@@ -92,11 +85,8 @@
   .btn-gold:active{ transform:scale(.97); }
   .btn-gold:disabled{ opacity:.6; cursor:default; }
   .btn-gold:disabled::after{ display:none; }
-
   .btn-ghost{ transition:background .2s ease, transform .15s ease; }
   .btn-ghost:active{ transform:scale(.97); }
-
-  /* ambient breathing glow */
   .ambient-glow{
     position:absolute; border-radius:9999px; filter:blur(80px);
     background:radial-gradient(circle, rgba(212,168,83,0.22), transparent 70%);
@@ -107,23 +97,16 @@
     0%,100%{ opacity:.55; transform:scale(1); }
     50%{ opacity:.9; transform:scale(1.12); }
   }
-
-  /* entrance animations */
   @keyframes fadeUp{
     from{ opacity:0; transform:translateY(14px); }
     to{ opacity:1; transform:translateY(0); }
   }
   .fade-up{ animation:fadeUp .6s cubic-bezier(.2,.8,.2,1) both; }
-
   @keyframes fadeIn{
     from{ opacity:0; } to{ opacity:1; }
   }
   .fade-in{ animation:fadeIn .5s ease both; }
-
-  /* tab transition */
   .tab-content{ animation:fadeUp .45s cubic-bezier(.2,.8,.2,1) both; }
-
-  /* crest monogram */
   .crest{
     width:44px; height:44px; border-radius:9999px;
     border:1.5px solid var(--border-gold);
@@ -131,20 +114,17 @@
     background:radial-gradient(circle at 30% 20%, rgba(212,168,83,0.18), transparent 70%);
     flex-shrink:0;
   }
-
   @media (prefers-reduced-motion: reduce){
     .ambient-glow, .fade-up, .fade-in, .tab-content{ animation:none !important; }
     .glass-hover:hover{ transform:none; }
     .btn-gold::after{ display:none; }
   }
-
   input:focus, textarea:focus{ outline:none; }
   #particleCanvas{ position:absolute; inset:0; z-index:0; }
 </style>
 </head>
 <body class="text-white min-h-screen">
 
-  <!-- LOGIN SCREEN -->
   <div id="loginScreen" class="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
     <canvas id="particleCanvas"></canvas>
     <div class="ambient-glow" style="width:420px;height:420px; top:15%; left:50%; transform:translateX(-50%);"></div>
@@ -168,7 +148,6 @@
     </div>
   </div>
 
-  <!-- DASHBOARD SHELL -->
   <div id="dashboard" class="hidden min-h-screen flex">
     <aside class="w-60 shrink-0 border-r border-white/8 min-h-screen p-4 flex flex-col relative">
       <div class="flex items-center gap-2.5 mb-9 px-1">
@@ -362,7 +341,6 @@
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     const target = document.getElementById('tab-' + name);
     target.classList.remove('hidden');
-    // retrigger entrance animation
     target.style.animation = 'none';
     void target.offsetWidth;
     target.style.animation = '';
@@ -377,7 +355,6 @@
     if(name==='mentor') loadMentorHistory();
   }
 
-  // ---- animated count-up for stat numbers ----
   function animateCount(el, target){
     const duration = 900;
     const start = performance.now();
@@ -397,7 +374,7 @@
     const { count: agCount } = await sb.from('leads').select('*', { count: 'exact', head: true }).eq('lead_type', 'web_agency');
     animateCount(document.getElementById('countRE'), reCount ?? 0);
     animateCount(document.getElementById('countAgency'), agCount ?? 0);
-    animateCount(document.getElementById('countFollowup'), 0); // wired in once follow_ups view is built
+    animateCount(document.getElementById('countFollowup'), 0);
   }
 
   async function testGenerateScript(){
@@ -423,7 +400,6 @@
     resultBox.textContent = JSON.stringify(data, null, 2);
   }
 
-  // ---- State -> primary US timezone (for call-time calculation) ----
   const STATE_TZ = {
     AL:"America/Chicago",AK:"America/Anchorage",AZ:"America/Phoenix",AR:"America/Chicago",
     CA:"America/Los_Angeles",CO:"America/Denver",CT:"America/New_York",DE:"America/New_York",
@@ -446,7 +422,7 @@
     const now = new Date();
     const hour = parseInt(new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hour12: false }).format(now));
     const timeStr = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit', hour12: true }).format(now);
-    const safe = hour >= 9 && hour < 20; // 9am-8pm their local time
+    const safe = hour >= 9 && hour < 20;
     return { label: `${timeStr} local`, safe };
   }
 
@@ -538,7 +514,23 @@
       const yrsCol = findCol(["years_delinquent","yrs_delinquent","delinquent_years"]);
 
       const ownerName = ownerCol ? raw[ownerCol] : null;
-      const address = addrCol ? raw[addrCol] : null;
+      let address = addrCol ? raw[addrCol] : null;
+      let pinLookupCity = null, pinLookupState = null;
+      if(!address && lower['pin']){
+        try {
+          const resp = await fetch('https://ebvrqkomufysyufveqjf.supabase.co/functions/v1/lookup-parcel-address', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pin: raw[lower['pin']] })
+          });
+          const data = await resp.json();
+          if(data.found && data.address){
+            address = data.address;
+            pinLookupCity = data.city;
+            pinLookupState = data.state;
+          } else { continue; }
+        } catch(e){ continue; }
+      }
       if(!address) continue;
 
       const taxOwed = taxCol ? parseFloat(String(raw[taxCol]).replace(/[$,]/g,'')) : null;
@@ -557,8 +549,8 @@
         source: llc ? 'llc_buyer' : signalLabel,
         first_name: ownerName,
         address: address,
-        city: cityCol ? raw[cityCol] : null,
-        state: stateCol ? raw[stateCol] : null,
+        city: cityCol ? raw[cityCol] : pinLookupCity,
+        state: stateCol ? raw[stateCol] : pinLookupState,
         status: 'new',
         motivation_score: motivationScore,
         notes: notes,
@@ -792,7 +784,6 @@
     loadCounts();
   }
 
-  // ---- ambient particle field on the login screen ----
   (function particles(){
     const canvas = document.getElementById('particleCanvas');
     if(!canvas) return;
@@ -830,7 +821,6 @@
     draw();
   })();
 
-  // If already logged in (session still valid), skip straight to dashboard
   (async () => {
     const { data: { session } } = await sb.auth.getSession();
     if(session) showDashboard();
