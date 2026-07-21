@@ -29,7 +29,6 @@
     position:relative;
     min-height:100vh;
   }
-  /* subtle film grain for tactile, non-flat feel */
   body::before{
     content:"";
     position:fixed; inset:0; z-index:9999; pointer-events:none;
@@ -65,13 +64,11 @@
   .accent-glow{ text-shadow:0 0 22px rgba(59,130,246,0.4); }
   ::selection{ background:rgba(59,130,246,0.3); }
 
-  /* custom scrollbar */
   ::-webkit-scrollbar{ width:8px; height:8px; }
   ::-webkit-scrollbar-track{ background:transparent; }
   ::-webkit-scrollbar-thumb{ background:rgba(59,130,246,0.25); border-radius:99px; }
   ::-webkit-scrollbar-thumb:hover{ background:rgba(59,130,246,0.45); }
 
-  /* nav */
   .nav-item{ position:relative; transition:color .2s ease; }
   .nav-item .nav-icon{ opacity:.6; transition:opacity .2s ease; }
   .nav-item.active{ color:var(--gold); }
@@ -87,7 +84,6 @@
   }
   .nav-item.active .nav-pill{ opacity:1; transform:scaleY(1); }
 
-  /* gold shimmer buttons */
   .btn-gold{
     position:relative; overflow:hidden;
     background:linear-gradient(135deg, var(--gold), #2563EB);
@@ -109,7 +105,6 @@
   .btn-ghost{ transition:background .2s ease, transform .15s ease; }
   .btn-ghost:active{ transform:scale(.97); }
 
-  /* ambient breathing glow */
   .ambient-glow{
     position:absolute; border-radius:9999px; filter:blur(80px);
     background:radial-gradient(circle, rgba(59,130,246,0.22), transparent 70%);
@@ -121,7 +116,6 @@
     50%{ opacity:.9; transform:scale(1.12); }
   }
 
-  /* entrance animations */
   @keyframes fadeUp{
     from{ opacity:0; transform:translateY(14px); }
     to{ opacity:1; transform:translateY(0); }
@@ -133,10 +127,8 @@
   }
   .fade-in{ animation:fadeIn .5s ease both; }
 
-  /* tab transition */
   .tab-content{ animation:fadeUp .45s cubic-bezier(.2,.8,.2,1) both; }
 
-  /* crest monogram */
   .crest{
     width:44px; height:44px; border-radius:9999px;
     border:1.5px solid var(--border-gold);
@@ -381,7 +373,6 @@
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     const target = document.getElementById('tab-' + name);
     target.classList.remove('hidden');
-    // retrigger entrance animation
     target.style.animation = 'none';
     void target.offsetWidth;
     target.style.animation = '';
@@ -396,7 +387,6 @@
     if(name==='mentor') loadMentorSessions();
   }
 
-  // ---- animated count-up for stat numbers ----
   function animateCount(el, target){
     const duration = 900;
     const start = performance.now();
@@ -416,7 +406,7 @@
     const { count: agCount } = await sb.from('leads').select('*', { count: 'exact', head: true }).eq('lead_type', 'web_agency');
     animateCount(document.getElementById('countRE'), reCount ?? 0);
     animateCount(document.getElementById('countAgency'), agCount ?? 0);
-    animateCount(document.getElementById('countFollowup'), 0); // wired in once follow_ups view is built
+    animateCount(document.getElementById('countFollowup'), 0);
   }
 
   async function testGenerateScript(){
@@ -442,7 +432,6 @@
     resultBox.textContent = JSON.stringify(data, null, 2);
   }
 
-  // ---- State -> primary US timezone (for call-time calculation) ----
   const STATE_TZ = {
     AL:"America/Chicago",AK:"America/Anchorage",AZ:"America/Phoenix",AR:"America/Chicago",
     CA:"America/Los_Angeles",CO:"America/Denver",CT:"America/New_York",DE:"America/New_York",
@@ -465,7 +454,7 @@
     const now = new Date();
     const hour = parseInt(new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hour12: false }).format(now));
     const timeStr = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit', hour12: true }).format(now);
-    const safe = hour >= 9 && hour < 20; // 9am-8pm their local time
+    const safe = hour >= 9 && hour < 20;
     return { label: `${timeStr} local`, safe };
   }
 
@@ -687,7 +676,7 @@
     btn.disabled = true;
     status.textContent = 'AI is sorting this out...';
 
-    const { data, error } = await sb.functions.invoke('clean-lead', {
+    const { data, error } = await sb.functions.invoke('clean-lead-import', {
       body: { raw_text: rawText, lead_type: leadType, user_id: currentUserId }
     });
 
@@ -699,7 +688,14 @@
       return;
     }
 
-    status.textContent = `Processed ${data.total} entries: ${data.created} new, ${data.updated} updated (duplicates matched), ${data.skippedNoKey} skipped (missing name/address).`;
+    if(data && data.error){
+      status.textContent = 'Could not process that: ' + data.error;
+      return;
+    }
+
+    const actionLabel = data.action === 'created_new' ? 'New lead added ✓' : 'Matched existing lead and updated it ✓';
+    const whoName = data.extracted?.name || data.extracted?.business_name || '';
+    status.textContent = whoName ? `${actionLabel} — ${whoName}` : actionLabel;
     textarea.value = '';
 
     if(leadType === 'real_estate') loadRealEstateLeads();
@@ -872,7 +868,6 @@
     loadCounts();
   }
 
-  // ---- ambient particle field on the login screen ----
   (function particles(){
     const canvas = document.getElementById('particleCanvas');
     if(!canvas) return;
@@ -910,7 +905,6 @@
     draw();
   })();
 
-  // If already logged in (session still valid), skip straight to dashboard
   (async () => {
     const { data: { session } } = await sb.auth.getSession();
     if(session) showDashboard();
