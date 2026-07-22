@@ -676,7 +676,7 @@
     btn.disabled = true;
     status.textContent = 'AI is sorting this out...';
 
-    const { data, error } = await sb.functions.invoke('clean-lead-import', {
+    const { data, error } = await sb.functions.invoke('clean-lead', {
       body: { raw_text: rawText, lead_type: leadType, user_id: currentUserId }
     });
 
