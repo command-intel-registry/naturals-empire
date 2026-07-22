@@ -615,9 +615,7 @@
     document.getElementById('reResults').innerHTML = '';
     loadRealEstateLeads();
     loadCounts();
-  }
-
-  async function loadRealEstateLeads(){
+  }async function loadRealEstateLeads(){
     if(!currentUserId) return;
     const { data } = await sb.from('leads').select('*').eq('lead_type','real_estate').eq('created_by', currentUserId).order('motivation_score', { ascending: false }).limit(50);
     const container = document.getElementById('reLeadsList');
@@ -639,7 +637,9 @@
           ${badge}
         </div>
         <div class="text-xs text-gray-500 mb-3">${escapeHtml(l.notes||'')}</div>
-        <div class="flex gap-2 items-center">
+        <div class="flex gap-2 items-center flex-wrap">
+          <input id="arv-input-${l.id}" type="number" placeholder="ARV (optional)"
+            class="w-28 bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-[#3B82F6]/60 transition-colors">
           <button onclick="generateScriptForLead('${l.id}', this)" class="btn-ghost bg-white/10 hover:bg-white/20 text-xs px-3 py-1.5 rounded-lg">Generate script</button>
           <button onclick="toggleChat('${l.id}')" class="btn-ghost bg-white/10 hover:bg-white/20 text-xs px-3 py-1.5 rounded-lg">Chat about this lead</button>
           ${l.call_script ? `<span class="text-xs text-green-400">Script ready ✓</span>` : ''}
