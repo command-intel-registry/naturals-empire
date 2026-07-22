@@ -653,9 +653,18 @@
   async function generateScriptForLead(leadId, btn){
     btn.textContent = 'Generating...';
     btn.disabled = true;
-    const { error } = await sb.functions.invoke('generate-script', { body: { lead_id: leadId } });
+
+    const arvInput = document.getElementById('arv-input-' + leadId);
+    const manualArv = arvInput && arvInput.value ? Number(arvInput.value) : undefined;
+
+    const { error } = await sb.functions.invoke('generate-script', {
+      body: { lead_id: leadId, manual_arv: manualArv }
+    });
+
     if(error){ alert('Failed: ' + JSON.stringify(error)); btn.textContent = 'Generate script'; btn.disabled = false; return; }
+
     loadRealEstateLeads();
+    loadAgencyLeads();
   }
 
   function escapeHtml(s){
