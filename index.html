@@ -418,7 +418,7 @@
             <div class="font-medium text-sm">${escapeHtml(name)}</div>
             <div class="text-xs text-gray-500">${escapeHtml(l.address||'')}, ${escapeHtml(l.city||'')} ${escapeHtml(l.state||'')}</div>
           </div>
-          <span class="text-xs px-2 py-0.5 rounded-full ${isOverdue ? 'bg-red-500/15 text-red-400' : 'bg-yellow-500/15 text-yellow-400'}">${isOverdue ? 'Overdue' : 'Due today'} - ${l.next_follow_up}</span>
+          <span class="text-xs px-2 py-0.5 rounded-full ${isOverdue ? 'bg-red-500/15 text-red-400' : 'bg-yellow-500/15 text-yellow-400'}">${isOverdue ? 'Overdue' : 'Due today'} - ${new Date(l.next_follow_up).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
         </div>
         <button onclick="toggleChat('${l.id}')" class="btn-ghost bg-white/10 hover:bg-white/20 text-xs px-3 py-1.5 rounded-lg">Chat about this lead</button>
         ${chatPanelHtml(l.id)}
